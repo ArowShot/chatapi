@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Chat Room</title>
+    <style>
+
+        #holder {
+            text-align: center;
+            width: 60%;
+            margin: auto;
+        }
+
+        #holder > div {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input.text {
+            flex-grow: 10;
+        }
+
+        #messageViewer {
+            text-align: left;
+            height: 400px;
+            border: 1px grey solid;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start !important;
+            align-items: flex-start;
+        }
+    </style>
+</head>
+<body>
+    <div id="holder">
+        <div>
+            <input class="text" id="name"></input>
+            <input type="button" id="setUser" value="Set Username"></button>
+        </div>
+        Current username: <span id="currentUsername"></span>
+        <div>
+            <input class="text"  id="room"></input>
+            <input type="button" id="join" value="Join Room" disabled></button>
+        </div>
+        Current room: <span id="currentRoom"></span>
+        <div id="messageViewer"></div>
+        <div>
+            <input class="text"  id="chat"></input>
+            <input type="button" id="send" value="Send Message" disabled></button>
+        </div>
+    </div>
+    <script>
+        var wsc = new WebSocket("ws://"+window.location.hostname+":8080/ws")
+
+        document.querySelector("#setUser").addEventListener("click", setUsername)
+        document.querySelector("#join").addEventListener("click", joinRoom)
+        document.querySelector("#send").addEventListener("click", sendMessage)
+
+        function setUsername() {
+            wsc.send(JSON.stringify(
+                {
+                    type: "username",
+                    data: document.querySelector("#name").value
+                }
+            ))
+            document.querySelector("#join").removeAttribute("disabled")
+            document.querySelector("#currentUsername").innerText = document.querySelector("#name").value
+        }
+
+        function joinRoom() {
+            wsc.send(JSON.stringify(
+                {
+                    type: "join",
+                    data: document.querySelector("#room").value
+                }
+            ))
+            document.querySelector("#send").removeAttribute("disabled")
+            var oldMessages = document.querySelector("#messageViewer").childNodes
+            for(var oldMessage of oldMessages) {
+                oldMessage.remove()
+            }
+            document.querySelector("#currentRoom").innerText = document.querySelector("#room").value
+        }
+
+        function sendMessage() {
+            wsc.send(JSON.stringify(
+                {
+                    type: "message",
+                    data: document.querySelector("#chat").value
+                }
+            ))
+        }
+
+        wsc.onmessage = function(msg) {
+            console.log(msg)
+            var msg = JSON.parse(msg.data)
+            var msgElem = document.createElement("div")
+            var msgName = document.createElement("span")
+            msgName.style.fontWeight = "bold"
+            msgName.innerText = msg.sender + ": "
+            var msgText = document.createElement("span")
+            msgText.innerText = msg.text
+            msgElem.appendChild(msgName)
+            msgElem.appendChild(msgText)
+            document.querySelector("#messageViewer").appendChild(msgElem)
+        }
+    </script>
+</body>
+</html>
